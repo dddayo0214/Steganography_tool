@@ -1,1111 +1,1492 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>暗像 · 圖片藏字工具</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-<style>
-:root{
-  --ink:#1b1815;
-  --ink-2:#221e19;
-  --panel:#26221d;
-  --panel-2:#2e2822;
-  --line:#3d362d;
-  --paper:#ede6d6;
-  --paper-dim:#a79c8a;
-  --paper-faint:#7d7364;
-  --safelight:#c1443c;
-  --safelight-dim:#7a332e;
-  --signal:#8faa8a;
-  --signal-dim:#5c6f58;
-}
-*{box-sizing:border-box;}
-html,body{margin:0;padding:0;}
-body{
-  background:
-    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(193,68,60,0.10), transparent 60%),
-    radial-gradient(ellipse 700px 500px at 100% 10%, rgba(143,170,138,0.06), transparent 55%),
-    var(--ink);
-  color:var(--paper);
-  font-family:'Source Serif 4', Georgia, serif;
-  min-height:100vh;
-  -webkit-font-smoothing:antialiased;
-}
-.mono{font-family:'IBM Plex Mono', monospace; letter-spacing:0.02em;}
-a{color:inherit;}
-
-/* ---------- layout ---------- */
-.wrap{max-width:1040px;margin:0 auto;padding:56px 24px 80px;}
-
-/* ---------- hero ---------- */
-.hero{display:flex;gap:48px;align-items:center;margin-bottom:64px;flex-wrap:wrap;}
-.hero-text{flex:1 1 360px;min-width:280px;}
-.eyebrow{
-  font-size:12px;text-transform:uppercase;color:var(--safelight);
-  letter-spacing:0.18em;margin:0 0 14px;
-}
-.eyebrow::before{content:'●';font-size:8px;margin-right:8px;vertical-align:middle;color:var(--safelight);}
-h1{
-  font-size:44px;line-height:1.08;margin:0 0 18px;font-weight:600;color:var(--paper);
-}
-h1 em{color:var(--safelight);font-style:italic;}
-.hero-text p{
-  color:var(--paper-dim);font-size:16px;line-height:1.7;max-width:46ch;margin:0;
-}
-.hero-visual{flex:0 0 280px;display:flex;justify-content:center;}
-
-/* the "developing tray" signature element */
-.tray{
-  position:relative;width:230px;height:230px;border-radius:6px;
-  background:linear-gradient(180deg, #100e0c, #1a1613);
-  border:1px solid var(--line);
-  box-shadow: inset 0 0 0 1px rgba(193,68,60,0.15), 0 30px 60px -20px rgba(0,0,0,0.6);
-  overflow:hidden;
-}
-.tray::before{
-  content:'';position:absolute;inset:0;
-  background: repeating-linear-gradient(0deg, rgba(237,230,214,0.035) 0px, rgba(237,230,214,0.035) 1px, transparent 1px, transparent 3px);
-  pointer-events:none;
-}
-.tray-grid{
-  position:absolute;inset:14px;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:repeat(12,1fr);gap:2px;
-}
-.tray-grid span{background:var(--paper-faint);opacity:0.12;border-radius:1px;animation:flicker 4.2s ease-in-out infinite;}
-.tray-grid span:nth-child(3n){animation-delay:0.4s;}
-.tray-grid span:nth-child(5n){animation-delay:1.1s;}
-.tray-grid span:nth-child(7n){animation-delay:1.8s;}
-@keyframes flicker{
-  0%,100%{opacity:0.08;}
-  50%{opacity:0.4;background:var(--safelight);}
-}
-.tray-sweep{
-  position:absolute;left:0;right:0;height:38%;top:-40%;
-  background:linear-gradient(180deg, rgba(193,68,60,0) 0%, rgba(193,68,60,0.22) 50%, rgba(193,68,60,0) 100%);
-  animation:sweep 5.5s ease-in-out infinite;
-}
-@keyframes sweep{
-  0%{top:-40%;}
-  55%{top:100%;}
-  100%{top:100%;}
-}
-.tray-caption{
-  position:absolute;bottom:10px;left:14px;right:14px;
-  font-size:10px;color:var(--paper-faint);display:flex;justify-content:space-between;
-}
-
-/* ---------- tabs ---------- */
-.tabs{display:flex;gap:2px;margin-bottom:0;border-bottom:1px solid var(--line);}
-.tab-btn{
-  flex:1;background:none;border:none;color:var(--paper-faint);font-family:'IBM Plex Mono',monospace;
-  font-size:13px;letter-spacing:0.06em;padding:14px 10px;cursor:pointer;text-transform:uppercase;
-  border-bottom:2px solid transparent;transition:color 0.15s, border-color 0.15s;
-}
-.tab-btn.active{color:var(--paper);border-bottom-color:var(--safelight);}
-.tab-btn:hover{color:var(--paper);}
-
-.panel{
-  background:var(--panel);border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px;
-  padding:36px;
-}
-.panel-section{display:none;}
-.panel-section.active{display:block;}
-
-.step-eyebrow{
-  font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--safelight);letter-spacing:0.14em;
-  margin:0 0 8px;text-transform:uppercase;
-}
-.field-label{
-  font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--paper-dim);
-  margin:0 0 8px;display:block;letter-spacing:0.03em;
-}
-
-/* dropzone */
-.dropzone{
-  border:1px dashed var(--line);border-radius:6px;padding:28px;text-align:center;
-  cursor:pointer;transition:border-color 0.15s, background 0.15s;margin-bottom:26px;
-  background:var(--ink-2);
-}
-.dropzone:hover, .dropzone.dragover{border-color:var(--safelight);background:rgba(193,68,60,0.05);}
-.dropzone p{margin:0;color:var(--paper-dim);font-size:14px;}
-.dropzone .dz-sub{font-size:12px;color:var(--paper-faint);margin-top:6px;font-family:'IBM Plex Mono',monospace;}
-.dropzone input{display:none;}
-
-.preview-row{display:flex;gap:24px;margin-bottom:26px;flex-wrap:wrap;}
-.preview-tray{
-  position:relative;width:180px;height:180px;flex:0 0 180px;border-radius:6px;overflow:hidden;
-  background:#100e0c;border:1px solid var(--line);
-  box-shadow: inset 0 0 0 1px rgba(193,68,60,0.12);
-}
-.preview-tray img{width:100%;height:100%;object-fit:cover;display:block;}
-.preview-tray.processing::after{
-  content:'';position:absolute;left:0;right:0;height:40%;top:-40%;
-  background:linear-gradient(180deg, rgba(143,170,138,0) 0%, rgba(143,170,138,0.35) 50%, rgba(143,170,138,0) 100%);
-  animation:sweep 1.1s linear infinite;
-}
-.preview-meta{flex:1;min-width:200px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--paper-dim);line-height:2;}
-.preview-meta b{color:var(--paper);}
-.capacity-bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:6px;}
-.capacity-fill{height:100%;background:var(--signal);width:0%;transition:width 0.2s;}
-.capacity-fill.over{background:var(--safelight);}
-
-textarea, input[type=text], input[type=password]{
-  width:100%;background:var(--ink-2);border:1px solid var(--line);border-radius:5px;
-  color:var(--paper);padding:12px 14px;font-family:'Source Serif 4', Georgia, serif;font-size:15px;
-  resize:vertical;
-}
-textarea:focus, input:focus{outline:none;border-color:var(--safelight);}
-textarea{min-height:100px;margin-bottom:20px;}
-.pw-row{display:flex;gap:14px;margin-bottom:26px;flex-wrap:wrap;align-items:flex-end;}
-.pw-field{flex:1;min-width:220px;}
-.pw-field input{font-family:'IBM Plex Mono',monospace;font-size:14px;}
-.hint{font-size:12px;color:var(--paper-faint);margin-top:6px;font-family:'IBM Plex Mono',monospace;}
-
-button.primary{
-  background:var(--safelight);color:#1b1815;border:none;border-radius:5px;
-  font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;
-  padding:13px 26px;cursor:pointer;font-weight:600;transition:background 0.15s, transform 0.1s;
-}
-button.primary:hover{background:#d65850;}
-button.primary:active{transform:scale(0.98);}
-button.primary:disabled{background:var(--line);color:var(--paper-faint);cursor:not-allowed;}
-
-button.secondary{
-  background:none;border:1px solid var(--line);color:var(--paper-dim);border-radius:5px;
-  font-family:'IBM Plex Mono',monospace;font-size:12px;padding:10px 18px;cursor:pointer;
-  text-transform:uppercase;letter-spacing:0.04em;transition:border-color 0.15s,color 0.15s;
-}
-button.secondary:hover{border-color:var(--paper-dim);color:var(--paper);}
-
-.status{
-  margin-top:20px;padding:14px 16px;border-radius:5px;font-family:'IBM Plex Mono',monospace;font-size:13px;
-  display:none;
-}
-.status.show{display:block;}
-.status.ok{background:rgba(143,170,138,0.1);border:1px solid var(--signal-dim);color:var(--signal);}
-.status.err{background:rgba(193,68,60,0.1);border:1px solid var(--safelight-dim);color:var(--safelight);}
-
-.result-box{margin-top:24px;}
-.result-box .field-label{margin-bottom:10px;}
-.decoded-text{
-  background:var(--ink-2);border:1px solid var(--signal-dim);border-radius:5px;padding:16px;
-  font-size:15px;line-height:1.7;white-space:pre-wrap;word-break:break-word;color:var(--paper);
-  margin-bottom:12px;
-}
-.download-link{
-  display:inline-flex;align-items:center;gap:8px;margin-top:6px;
-  font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--signal);text-decoration:none;
-  border:1px solid var(--signal-dim);padding:11px 20px;border-radius:5px;transition:background 0.15s;
-}
-.download-link:hover{background:rgba(143,170,138,0.08);}
-
-.action-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
-
-footer{margin-top:56px;text-align:center;color:var(--paper-faint);font-size:12px;font-family:'IBM Plex Mono',monospace;}
-footer p{margin:4px 0;}
-
-@media(max-width:560px){
-  h1{font-size:32px;}
-  .panel{padding:22px;}
-  .hero{gap:28px;}
-  .hero-visual{flex:0 0 auto;}
-  .tray{width:190px;height:190px;}
-}
-</style>
-</head>
-<body>
-<div class="wrap">
-
-  <div class="hero">
-    <div class="hero-text">
-      <p class="eyebrow">隱寫術 · 端側加密</p>
-      <h1>把一句話，或<br>一個<em>檔案</em>，藏進圖裡</h1>
-      <p>選一張圖片，藏進文字或整個壓縮檔，選擇性加上密碼。所有運算都在你的瀏覽器裡完成——不會上傳任何東西。</p>
-    </div>
-    <div class="hero-visual">
-      <div class="tray">
-        <div class="tray-grid" id="trayGrid"></div>
-        <div class="tray-sweep"></div>
-        <div class="tray-caption mono"><span>001101</span><span>DEVELOPING</span></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="encode">藏入文字</button>
-    <button class="tab-btn" data-tab="decode">取出文字</button>
-    <button class="tab-btn" data-tab="encodeFile">藏入檔案</button>
-    <button class="tab-btn" data-tab="decodeFile">取出檔案</button>
-  </div>
-
-  <div class="panel">
-
-    <!-- ===================== ENCODE ===================== -->
-    <section class="panel-section active" id="encode">
-      <p class="step-eyebrow">01 選擇圖片</p>
-      <div class="dropzone" id="encDropzone">
-        <p>拖曳圖片到這裡，或點擊選擇檔案</p>
-        <p class="dz-sub">建議使用 PNG（無失真格式，才能完整保留藏入的資料）</p>
-        <input type="file" id="encFileInput" accept="image/*">
-      </div>
-
-      <div class="preview-row" id="encPreviewRow" style="display:none;">
-        <div class="preview-tray" id="encPreviewTray"><img id="encPreviewImg" alt="預覽"></div>
-        <div class="preview-meta">
-          <div>尺寸　<b id="encDims">–</b></div>
-          <div>可藏容量　<b id="encCapacity">–</b></div>
-          <div class="capacity-bar"><div class="capacity-fill" id="encCapacityFill"></div></div>
-          <div style="margin-top:6px;">已使用　<b id="encUsage">0 bytes</b></div>
-        </div>
-      </div>
-
-      <p class="step-eyebrow">02 輸入文字</p>
-      <span class="field-label">要藏入的內容</span>
-      <textarea id="encText" placeholder="在這裡輸入你想藏進圖片的文字……"></textarea>
-
-      <p class="step-eyebrow">03 加密（選填）</p>
-      <div class="pw-row">
-        <div class="pw-field">
-          <span class="field-label">密碼（留空則不加密）</span>
-          <input type="password" id="encPassword" placeholder="設定密碼以加密內容">
-          <p class="hint">使用 AES-256-GCM 加密，只有輸入正確密碼才能取出文字</p>
-        </div>
-      </div>
-
-      <p class="step-eyebrow">04 匯出</p>
-      <div class="action-row">
-        <button class="primary" id="encBtn" disabled>藏入並產生圖片</button>
-      </div>
-
-      <div class="status" id="encStatus"></div>
-
-      <div class="result-box" id="encResultBox" style="display:none;">
-        <span class="field-label">下載藏字後的圖片</span>
-        <a class="download-link" id="encDownload" download="hidden.png">
-          ⭳ 下載 hidden.png
-        </a>
-      </div>
-    </section>
-
-    <!-- ===================== DECODE ===================== -->
-    <section class="panel-section" id="decode">
-      <p class="step-eyebrow">01 選擇圖片</p>
-      <div class="dropzone" id="decDropzone">
-        <p>拖曳藏有文字的圖片到這裡，或點擊選擇檔案</p>
-        <p class="dz-sub">請上傳「藏入文字」步驟產生的原始 PNG 檔</p>
-        <input type="file" id="decFileInput" accept="image/*">
-      </div>
-
-      <div class="preview-row" id="decPreviewRow" style="display:none;">
-        <div class="preview-tray" id="decPreviewTray"><img id="decPreviewImg" alt="預覽"></div>
-        <div class="preview-meta">
-          <div>尺寸　<b id="decDims">–</b></div>
-          <div>狀態　<b id="decFlagInfo">尚未解析</b></div>
-        </div>
-      </div>
-
-      <p class="step-eyebrow">02 密碼（若加密則必填）</p>
-      <div class="pw-row">
-        <div class="pw-field">
-          <span class="field-label">密碼</span>
-          <input type="password" id="decPassword" placeholder="若藏入時有設密碼，請在此輸入">
-        </div>
-      </div>
-
-      <div class="action-row">
-        <button class="primary" id="decBtn" disabled>取出文字</button>
-      </div>
-
-      <div class="status" id="decStatus"></div>
-
-      <div class="result-box" id="decResultBox" style="display:none;">
-        <span class="field-label">取出的文字</span>
-        <div class="decoded-text" id="decodedText"></div>
-        <button class="secondary" id="copyBtn">複製文字</button>
-      </div>
-    </section>
-
-    <!-- ===================== ENCODE FILE (append after image) ===================== -->
-    <section class="panel-section" id="encodeFile">
-      <p class="step-eyebrow">原理</p>
-      <p style="color:var(--paper-dim);font-size:14px;line-height:1.7;margin:0 0 26px;">
-        這個模式把整個檔案（例如 .zip）原封不動接在圖片資料的<b style="color:var(--paper);">結尾之後</b>。
-        圖片本身完全不變，一般看圖軟體、瀏覽器都會正常顯示；只有懂得去圖片尾端讀取的人（或用這個工具）才能把檔案還原出來。
-      </p>
-
-      <p class="step-eyebrow">01 選擇封面圖片</p>
-      <div class="dropzone" id="efImgDropzone">
-        <p>拖曳圖片到這裡，或點擊選擇檔案</p>
-        <p class="dz-sub">任何圖片格式皆可，會保留原始檔案位元組不重新編碼</p>
-        <input type="file" id="efImgInput" accept="image/*">
-      </div>
-      <div class="preview-row" id="efImgPreviewRow" style="display:none;">
-        <div class="preview-tray" id="efImgPreviewTray"><img id="efImgPreviewImg" alt="預覽"></div>
-        <div class="preview-meta">
-          <div>檔名　<b id="efImgName">–</b></div>
-          <div>圖片大小　<b id="efImgSize">–</b></div>
-        </div>
-      </div>
-
-      <p class="step-eyebrow">02 選擇要藏入的檔案</p>
-      <div class="dropzone" id="efFileDropzone">
-        <p>拖曳任何檔案到這裡，例如 .zip、.pdf、.docx……</p>
-        <p class="dz-sub">沒有大小限制，但圖片會因此變大</p>
-        <input type="file" id="efFileInput">
-      </div>
-      <div class="preview-row" id="efFilePreviewRow" style="display:none;">
-        <div class="preview-meta" style="flex:1;">
-          <div>檔名　<b id="efFileName">–</b></div>
-          <div>檔案大小　<b id="efFileSize">–</b></div>
-        </div>
-      </div>
-
-      <p class="step-eyebrow">03 加密（選填）</p>
-      <div class="pw-row">
-        <div class="pw-field">
-          <span class="field-label">密碼（留空則不加密）</span>
-          <input type="password" id="efPassword" placeholder="設定密碼以加密藏入的檔案">
-          <p class="hint">加密後就不再是一般 zip 結構，只有用本工具＋正確密碼才能還原</p>
-        </div>
-      </div>
-
-      <p class="step-eyebrow">04 匯出</p>
-      <div class="action-row">
-        <button class="primary" id="efEncBtn" disabled>合併並產生圖片</button>
-      </div>
-
-      <div class="status" id="efEncStatus"></div>
-
-      <div class="result-box" id="efEncResultBox" style="display:none;">
-        <span class="field-label">下載藏檔後的圖片</span>
-        <a class="download-link" id="efEncDownload" download="hidden.png">
-          ⭳ 下載合併後的圖片
-        </a>
-      </div>
-    </section>
-
-    <!-- ===================== DECODE FILE ===================== -->
-    <section class="panel-section" id="decodeFile">
-      <p class="step-eyebrow">01 選擇藏有檔案的圖片</p>
-      <div class="dropzone" id="dfDropzone">
-        <p>拖曳圖片到這裡，或點擊選擇檔案</p>
-        <p class="dz-sub">請上傳「藏入檔案」步驟產生的圖片</p>
-        <input type="file" id="dfFileInput" accept="image/*">
-      </div>
-
-      <div class="preview-row" id="dfPreviewRow" style="display:none;">
-        <div class="preview-tray" id="dfPreviewTray"><img id="dfPreviewImg" alt="預覽"></div>
-        <div class="preview-meta">
-          <div>圖片大小　<b id="dfImgSize">–</b></div>
-          <div>狀態　<b id="dfFlagInfo">尚未解析</b></div>
-        </div>
-      </div>
-
-      <p class="step-eyebrow">02 密碼（若加密則必填）</p>
-      <div class="pw-row">
-        <div class="pw-field">
-          <span class="field-label">密碼</span>
-          <input type="password" id="dfPassword" placeholder="若藏入時有設密碼，請在此輸入">
-        </div>
-      </div>
-
-      <div class="action-row">
-        <button class="primary" id="dfBtn" disabled>取出檔案</button>
-      </div>
-
-      <div class="status" id="dfStatus"></div>
-
-      <div class="result-box" id="dfResultBox" style="display:none;">
-        <span class="field-label">還原的檔案</span>
-        <div class="decoded-text mono" id="dfFileInfo" style="margin-bottom:12px;"></div>
-        <a class="download-link" id="dfDownload" download="">
-          ⭳ 下載還原的檔案
-        </a>
-      </div>
-    </section>
-
-  </div>
-
-  <footer>
-    <p>所有加解密與圖片處理都在瀏覽器本機執行，不會上傳任何資料。</p>
-    <p>暗像 · Image Steganography Tool</p>
-  </footer>
-</div>
-
-<script>
-/* ---------- decorative tray grid ---------- */
-(function(){
-  const grid = document.getElementById('trayGrid');
-  for(let i=0;i<144;i++){
-    const s = document.createElement('span');
-    grid.appendChild(s);
-  }
-})();
-
-/* ---------- tabs ---------- */
-document.querySelectorAll('.tab-btn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.panel-section').forEach(s=>s.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(btn.dataset.tab).classList.add('active');
-  });
-});
-
-/* ================= core steganography helpers ================= */
-
-const HEADER_BYTES = 5; // 1 flag byte + 4 length bytes (big endian)
-
-function u8ToBits(bytes){
-  const bits = new Uint8Array(bytes.length*8);
-  for(let i=0;i<bytes.length;i++){
-    for(let b=0;b<8;b++){
-      bits[i*8+b] = (bytes[i] >> (7-b)) & 1;
-    }
-  }
-  return bits;
-}
-function bitsToBytes(bits){
-  const out = new Uint8Array(bits.length/8);
-  for(let i=0;i<out.length;i++){
-    let v=0;
-    for(let b=0;b<8;b++){
-      v = (v<<1) | bits[i*8+b];
-    }
-    out[i]=v;
-  }
-  return out;
-}
-function embedBitsIntoImageData(imageData, bits){
-  const data = imageData.data;
-  let bi = 0;
-  for(let i=0;i<data.length && bi<bits.length;i++){
-    if((i & 3) === 3) continue; // skip alpha channel
-    data[i] = (data[i] & 0xFE) | bits[bi];
-    bi++;
-  }
-  return bi; // bits actually written
-}
-function extractBitsFromImageData(imageData, numBits){
-  const data = imageData.data;
-  const bits = new Uint8Array(numBits);
-  let bi = 0;
-  for(let i=0;i<data.length && bi<numBits;i++){
-    if((i & 3) === 3) continue;
-    bits[bi] = data[i] & 1;
-    bi++;
-  }
-  return bits;
-}
-function imageCapacityBytes(width,height){
-  const usableChannels = width*height*3; // RGB only
-  const totalBits = usableChannels;
-  return Math.floor(totalBits/8);
-}
-
-/* ---------- crypto helpers (AES-GCM + PBKDF2) ---------- */
-async function deriveKey(password, salt){
-  const enc = new TextEncoder();
-  const baseKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
-  return crypto.subtle.deriveKey(
-    { name:'PBKDF2', salt, iterations:150000, hash:'SHA-256' },
-    baseKey,
-    { name:'AES-GCM', length:256 },
-    false,
-    ['encrypt','decrypt']
-  );
-}
-async function encryptText(text, password){
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await deriveKey(password, salt);
-  const enc = new TextEncoder();
-  const ciphertext = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, enc.encode(text)));
-  const payload = new Uint8Array(salt.length + iv.length + ciphertext.length);
-  payload.set(salt,0);
-  payload.set(iv,salt.length);
-  payload.set(ciphertext, salt.length+iv.length);
-  return payload;
-}
-async function decryptPayload(payload, password){
-  const salt = payload.slice(0,16);
-  const iv = payload.slice(16,28);
-  const ciphertext = payload.slice(28);
-  const key = await deriveKey(password, salt);
-  const plainBuf = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, ciphertext);
-  return new TextDecoder().decode(plainBuf);
-}
-
-function buildPayloadBytes(flag, payload){
-  const out = new Uint8Array(HEADER_BYTES + payload.length);
-  out[0] = flag;
-  out[1] = (payload.length >>> 24) & 0xFF;
-  out[2] = (payload.length >>> 16) & 0xFF;
-  out[3] = (payload.length >>> 8) & 0xFF;
-  out[4] = payload.length & 0xFF;
-  out.set(payload, HEADER_BYTES);
-  return out;
-}
-
-/* ================= ENCODE UI ================= */
-const encDropzone = document.getElementById('encDropzone');
-const encFileInput = document.getElementById('encFileInput');
-const encPreviewRow = document.getElementById('encPreviewRow');
-const encPreviewImg = document.getElementById('encPreviewImg');
-const encPreviewTray = document.getElementById('encPreviewTray');
-const encDims = document.getElementById('encDims');
-const encCapacity = document.getElementById('encCapacity');
-const encCapacityFill = document.getElementById('encCapacityFill');
-const encUsage = document.getElementById('encUsage');
-const encText = document.getElementById('encText');
-const encPassword = document.getElementById('encPassword');
-const encBtn = document.getElementById('encBtn');
-const encStatus = document.getElementById('encStatus');
-const encResultBox = document.getElementById('encResultBox');
-const encDownload = document.getElementById('encDownload');
-
-let encImage = null; // HTMLImageElement
-let encCapacityBytes = 0;
-
-function setupDropzone(zone, input, onFile){
-  zone.addEventListener('click', ()=>input.click());
-  input.addEventListener('change', e=>{
-    if(e.target.files[0]) onFile(e.target.files[0]);
-  });
-  zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.classList.add('dragover'); });
-  zone.addEventListener('dragleave', ()=> zone.classList.remove('dragover'));
-  zone.addEventListener('drop', e=>{
-    e.preventDefault();
-    zone.classList.remove('dragover');
-    if(e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);
-  });
-}
-
-function loadImageFile(file){
-  return new Promise((resolve,reject)=>{
-    if(!file.type.startsWith('image/')){ reject(new Error('請選擇圖片檔')); return; }
-    const reader = new FileReader();
-    reader.onload = ()=>{
-      const img = new Image();
-      img.onload = ()=>resolve({img, dataUrl:reader.result});
-      img.onerror = ()=>reject(new Error('圖片讀取失敗'));
-      img.src = reader.result;
-    };
-    reader.onerror = ()=>reject(new Error('檔案讀取失敗'));
-    reader.readAsDataURL(file);
-  });
-}
-
-function showStatus(el, type, msg){
-  el.className = 'status show ' + type;
-  el.textContent = msg;
-}
-function hideStatus(el){
-  el.className = 'status';
-}
-
-function updateEncCapacity(){
-  encCapacityBytes = imageCapacityBytes(encImage.naturalWidth, encImage.naturalHeight);
-  encCapacity.textContent = encCapacityBytes.toLocaleString() + ' bytes';
-  updateEncUsage();
-}
-function estimateUsageBytes(){
-  const textBytes = new TextEncoder().encode(encText.value).length;
-  const hasPw = encPassword.value.length > 0;
-  // encrypted payload = salt(16)+iv(12)+ciphertext(text+16 tag) ; plain = text bytes
-  const payloadLen = hasPw ? (16+12+textBytes+16) : textBytes;
-  return HEADER_BYTES + payloadLen;
-}
-function updateEncUsage(){
-  if(!encImage){ return; }
-  const used = estimateUsageBytes();
-  encUsage.textContent = used.toLocaleString() + ' bytes';
-  const pct = encCapacityBytes>0 ? Math.min(100, (used/encCapacityBytes)*100) : 0;
-  encCapacityFill.style.width = pct+'%';
-  encCapacityFill.classList.toggle('over', used > encCapacityBytes);
-  encBtn.disabled = !(encText.value.trim().length>0 && used <= encCapacityBytes);
-}
-
-setupDropzone(encDropzone, encFileInput, async (file)=>{
-  hideStatus(encStatus);
-  encResultBox.style.display='none';
-  try{
-    const {img, dataUrl} = await loadImageFile(file);
-    encImage = img;
-    encPreviewImg.src = dataUrl;
-    encPreviewRow.style.display='flex';
-    encDims.textContent = img.naturalWidth + ' × ' + img.naturalHeight + ' px';
-    updateEncCapacity();
-  }catch(err){
-    showStatus(encStatus,'err', err.message);
-  }
-});
-encText.addEventListener('input', updateEncUsage);
-encPassword.addEventListener('input', updateEncUsage);
-
-encBtn.addEventListener('click', async ()=>{
-  hideStatus(encStatus);
-  encResultBox.style.display='none';
-  if(!encImage){ showStatus(encStatus,'err','請先選擇圖片'); return; }
-  const text = encText.value;
-  if(!text.trim()){ showStatus(encStatus,'err','請輸入要藏入的文字'); return; }
-
-  encBtn.disabled = true;
-  encPreviewTray.classList.add('processing');
-  await new Promise(r=>setTimeout(r,150)); // let the developing animation play briefly
-
-  try{
-    const password = encPassword.value;
-    let flag, payload;
-    if(password){
-      flag = 1;
-      payload = await encryptText(text, password);
-    }else{
-      flag = 0;
-      payload = new TextEncoder().encode(text);
-    }
-    const fullBytes = buildPayloadBytes(flag, payload);
-    const bits = u8ToBits(fullBytes);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = encImage.naturalWidth;
-    canvas.height = encImage.naturalHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(encImage,0,0);
-    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-
-    const capacityBits = canvas.width*canvas.height*3;
-    if(bits.length > capacityBits){
-      throw new Error('文字內容超過圖片可藏容量，請縮短文字或換一張更大的圖片');
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>暗像 · 圖片藏字工具</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1b1815;
+      --ink-2: #221e19;
+      --panel: #26221d;
+      --panel-2: #2e2822;
+      --line: #3d362d;
+      --paper: #ede6d6;
+      --paper-dim: #a79c8a;
+      --paper-faint: #7d7364;
+      --safelight: #c1443c;
+      --safelight-dim: #7a332e;
+      --signal: #8faa8a;
+      --signal-dim: #5c6f58;
     }
 
-    embedBitsIntoImageData(imageData, bits);
-    ctx.putImageData(imageData,0,0);
-
-    canvas.toBlob(blob=>{
-      const url = URL.createObjectURL(blob);
-      encDownload.href = url;
-      encResultBox.style.display='block';
-      showStatus(encStatus,'ok','完成！文字已藏入圖片，點選下方按鈕下載。');
-    }, 'image/png');
-
-  }catch(err){
-    showStatus(encStatus,'err', err.message || '發生錯誤，請再試一次');
-  }finally{
-    encPreviewTray.classList.remove('processing');
-    encBtn.disabled = false;
-  }
-});
-
-/* ================= DECODE UI ================= */
-const decDropzone = document.getElementById('decDropzone');
-const decFileInput = document.getElementById('decFileInput');
-const decPreviewRow = document.getElementById('decPreviewRow');
-const decPreviewImg = document.getElementById('decPreviewImg');
-const decPreviewTray = document.getElementById('decPreviewTray');
-const decDims = document.getElementById('decDims');
-const decFlagInfo = document.getElementById('decFlagInfo');
-const decPassword = document.getElementById('decPassword');
-const decBtn = document.getElementById('decBtn');
-const decStatus = document.getElementById('decStatus');
-const decResultBox = document.getElementById('decResultBox');
-const decodedTextEl = document.getElementById('decodedText');
-const copyBtn = document.getElementById('copyBtn');
-
-let decImage = null;
-let decHeaderInfo = null; // {flag, length}
-
-setupDropzone(decDropzone, decFileInput, async (file)=>{
-  hideStatus(decStatus);
-  decResultBox.style.display='none';
-  decFlagInfo.textContent = '解析中…';
-  try{
-    const {img, dataUrl} = await loadImageFile(file);
-    decImage = img;
-    decPreviewImg.src = dataUrl;
-    decPreviewRow.style.display='flex';
-    decDims.textContent = img.naturalWidth + ' × ' + img.naturalHeight + ' px';
-
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img,0,0);
-    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-    const headerBits = extractBitsFromImageData(imageData, HEADER_BYTES*8);
-    const headerBytes = bitsToBytes(headerBits);
-    const flag = headerBytes[0];
-    const length = (headerBytes[1]<<24)|(headerBytes[2]<<16)|(headerBytes[3]<<8)|headerBytes[4];
-    const capacityBits = canvas.width*canvas.height*3;
-
-    if(length<0 || (HEADER_BYTES+length)*8 > capacityBits || (flag!==0 && flag!==1)){
-      decFlagInfo.textContent = '這張圖片似乎沒有藏入的資料';
-      decBtn.disabled = true;
-      decHeaderInfo = null;
-      return;
+    * {
+      box-sizing: border-box;
     }
-    decHeaderInfo = {flag, length};
-    decFlagInfo.textContent = flag===1 ? '偵測到已加密內容 🔒' : '偵測到未加密內容';
-    decBtn.disabled = false;
-  }catch(err){
-    showStatus(decStatus,'err', err.message);
-    decFlagInfo.textContent = '解析失敗';
-  }
-});
 
-decBtn.addEventListener('click', async ()=>{
-  hideStatus(decStatus);
-  decResultBox.style.display='none';
-  if(!decImage || !decHeaderInfo){ showStatus(decStatus,'err','請先選擇有效的圖片'); return; }
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
 
-  decBtn.disabled = true;
-  decPreviewTray.classList.add('processing');
-  await new Promise(r=>setTimeout(r,150));
+    body {
+      background:
+        radial-gradient(ellipse 900px 500px at 15% -10%, rgba(193, 68, 60, 0.10), transparent 60%),
+        radial-gradient(ellipse 700px 500px at 100% 10%, rgba(143, 170, 138, 0.06), transparent 55%),
+        var(--ink);
+      color: var(--paper);
+      font-family: 'Source Serif 4', Georgia, serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
 
-  try{
-    const canvas = document.createElement('canvas');
-    canvas.width = decImage.naturalWidth;
-    canvas.height = decImage.naturalHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(decImage,0,0);
-    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    .mono {
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 0.02em;
+    }
 
-    const {flag, length} = decHeaderInfo;
-    const totalBits = (HEADER_BYTES+length)*8;
-    const allBits = extractBitsFromImageData(imageData, totalBits);
-    const allBytes = bitsToBytes(allBits);
-    const payload = allBytes.slice(HEADER_BYTES);
+    a {
+      color: inherit;
+    }
 
-    let text;
-    if(flag===1){
-      const password = decPassword.value;
-      if(!password){ throw new Error('這段內容已加密，請輸入密碼'); }
-      try{
-        text = await decryptPayload(payload, password);
-      }catch(e){
-        throw new Error('密碼錯誤，或圖片內容已毀損');
+    /* ---------- layout ---------- */
+    .wrap {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+
+    /* ---------- hero ---------- */
+    .hero {
+      display: flex;
+      gap: 48px;
+      align-items: center;
+      margin-bottom: 64px;
+      flex-wrap: wrap;
+    }
+
+    .hero-text {
+      flex: 1 1 360px;
+      min-width: 280px;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--safelight);
+      letter-spacing: 0.18em;
+      margin: 0 0 14px;
+    }
+
+    .eyebrow::before {
+      content: '●';
+      font-size: 8px;
+      margin-right: 8px;
+      vertical-align: middle;
+      color: var(--safelight);
+    }
+
+    h1 {
+      font-size: 44px;
+      line-height: 1.08;
+      margin: 0 0 18px;
+      font-weight: 600;
+      color: var(--paper);
+    }
+
+    h1 em {
+      color: var(--safelight);
+      font-style: italic;
+    }
+
+    .hero-text p {
+      color: var(--paper-dim);
+      font-size: 16px;
+      line-height: 1.7;
+      max-width: 46ch;
+      margin: 0;
+    }
+
+    .hero-visual {
+      flex: 0 0 280px;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* the "developing tray" signature element */
+    .tray {
+      position: relative;
+      width: 230px;
+      height: 230px;
+      border-radius: 6px;
+      background: linear-gradient(180deg, #100e0c, #1a1613);
+      border: 1px solid var(--line);
+      box-shadow: inset 0 0 0 1px rgba(193, 68, 60, 0.15), 0 30px 60px -20px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+    }
+
+    .tray::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, rgba(237, 230, 214, 0.035) 0px, rgba(237, 230, 214, 0.035) 1px, transparent 1px, transparent 3px);
+      pointer-events: none;
+    }
+
+    .tray-grid {
+      position: absolute;
+      inset: 14px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-template-rows: repeat(12, 1fr);
+      gap: 2px;
+    }
+
+    .tray-grid span {
+      background: var(--paper-faint);
+      opacity: 0.12;
+      border-radius: 1px;
+      animation: flicker 4.2s ease-in-out infinite;
+    }
+
+    .tray-grid span:nth-child(3n) {
+      animation-delay: 0.4s;
+    }
+
+    .tray-grid span:nth-child(5n) {
+      animation-delay: 1.1s;
+    }
+
+    .tray-grid span:nth-child(7n) {
+      animation-delay: 1.8s;
+    }
+
+    @keyframes flicker {
+
+      0%,
+      100% {
+        opacity: 0.08;
       }
-    }else{
-      text = new TextDecoder().decode(payload);
+
+      50% {
+        opacity: 0.4;
+        background: var(--safelight);
+      }
     }
 
-    decodedTextEl.textContent = text;
-    decResultBox.style.display='block';
-    showStatus(decStatus,'ok','成功取出藏在圖片中的文字。');
-  }catch(err){
-    showStatus(decStatus,'err', err.message || '解密失敗，請確認圖片與密碼是否正確');
-  }finally{
-    decPreviewTray.classList.remove('processing');
-    decBtn.disabled = false;
-  }
-});
-
-copyBtn.addEventListener('click', async ()=>{
-  try{
-    await navigator.clipboard.writeText(decodedTextEl.textContent);
-    copyBtn.textContent = '已複製';
-    setTimeout(()=>copyBtn.textContent='複製文字', 1500);
-  }catch(e){
-    copyBtn.textContent = '複製失敗';
-  }
-});
-
-/* ================= FILE-APPEND STEGANOGRAPHY (encode/decode whole files) ================= */
-
-const MAGIC = new TextEncoder().encode('STEGOFL1'); // 8-byte signature
-
-function readFileAsArrayBuffer(file){
-  return new Promise((resolve,reject)=>{
-    const reader = new FileReader();
-    reader.onload = ()=>resolve(reader.result);
-    reader.onerror = ()=>reject(new Error('檔案讀取失敗'));
-    reader.readAsArrayBuffer(file);
-  });
-}
-function formatBytes(n){
-  if(n < 1024) return n + ' B';
-  if(n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
-  return (n/(1024*1024)).toFixed(2) + ' MB';
-}
-function concatBytes(...parts){
-  let total = 0;
-  parts.forEach(p=>total+=p.length);
-  const out = new Uint8Array(total);
-  let offset = 0;
-  parts.forEach(p=>{ out.set(p, offset); offset += p.length; });
-  return out;
-}
-function u32be(n){
-  return new Uint8Array([(n>>>24)&0xFF,(n>>>16)&0xFF,(n>>>8)&0xFF,n&0xFF]);
-}
-function readU32be(bytes, offset){
-  return (bytes[offset]<<24 | bytes[offset+1]<<16 | bytes[offset+2]<<8 | bytes[offset+3]) >>> 0;
-}
-function u16be(n){
-  return new Uint8Array([(n>>>8)&0xFF, n&0xFF]);
-}
-function readU16be(bytes, offset){
-  return (bytes[offset]<<8) | bytes[offset+1];
-}
-
-/* build tail = MAGIC(8) + flag(1) + fnameLen(2) + fname(utf8) + payloadLen(4) + payload */
-function buildFileTail(flag, filename, payload){
-  const fnameBytes = new TextEncoder().encode(filename);
-  return concatBytes(
-    MAGIC,
-    new Uint8Array([flag]),
-    u16be(fnameBytes.length),
-    fnameBytes,
-    u32be(payload.length),
-    payload
-  );
-}
-
-/* find all offsets where MAGIC occurs in bytes */
-function findMagicOffsets(bytes){
-  const offsets = [];
-  const first = MAGIC[0];
-  for(let i=0;i<=bytes.length-MAGIC.length;i++){
-    if(bytes[i]!==first) continue;
-    let match = true;
-    for(let j=1;j<MAGIC.length;j++){
-      if(bytes[i+j]!==MAGIC[j]){ match=false; break; }
+    .tray-sweep {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 38%;
+      top: -40%;
+      background: linear-gradient(180deg, rgba(193, 68, 60, 0) 0%, rgba(193, 68, 60, 0.22) 50%, rgba(193, 68, 60, 0) 100%);
+      animation: sweep 5.5s ease-in-out infinite;
     }
-    if(match) offsets.push(i);
-  }
-  return offsets;
-}
 
-/* try to parse a valid tail starting at each candidate offset; return {flag, filename, payload} or null */
-function tryParseTail(bytes, offset){
-  try{
-    let p = offset + MAGIC.length;
-    const flag = bytes[p]; p += 1;
-    if(flag!==0 && flag!==1) return null;
-    const fnameLen = readU16be(bytes, p); p += 2;
-    if(p + fnameLen > bytes.length) return null;
-    const fnameBytes = bytes.slice(p, p+fnameLen); p += fnameLen;
-    const filename = new TextDecoder().decode(fnameBytes);
-    const payloadLen = readU32be(bytes, p); p += 4;
-    if(p + payloadLen !== bytes.length) return null; // must exactly reach end of file
-    const payload = bytes.slice(p, p+payloadLen);
-    return {flag, filename, payload};
-  }catch(e){
-    return null;
-  }
-}
-function findValidTail(bytes){
-  const offsets = findMagicOffsets(bytes);
-  // prefer the last occurrence first (real tail is appended at the very end)
-  for(let i=offsets.length-1;i>=0;i--){
-    const parsed = tryParseTail(bytes, offsets[i]);
-    if(parsed) return parsed;
-  }
-  return null;
-}
+    @keyframes sweep {
+      0% {
+        top: -40%;
+      }
 
-/* ---------- encode file UI ---------- */
-const efImgDropzone = document.getElementById('efImgDropzone');
-const efImgInput = document.getElementById('efImgInput');
-const efImgPreviewRow = document.getElementById('efImgPreviewRow');
-const efImgPreviewImg = document.getElementById('efImgPreviewImg');
-const efImgPreviewTray = document.getElementById('efImgPreviewTray');
-const efImgName = document.getElementById('efImgName');
-const efImgSize = document.getElementById('efImgSize');
+      55% {
+        top: 100%;
+      }
 
-const efFileDropzone = document.getElementById('efFileDropzone');
-const efFileInput = document.getElementById('efFileInput');
-const efFilePreviewRow = document.getElementById('efFilePreviewRow');
-const efFileName = document.getElementById('efFileName');
-const efFileSize = document.getElementById('efFileSize');
+      100% {
+        top: 100%;
+      }
+    }
 
-const efPassword = document.getElementById('efPassword');
-const efEncBtn = document.getElementById('efEncBtn');
-const efEncStatus = document.getElementById('efEncStatus');
-const efEncResultBox = document.getElementById('efEncResultBox');
-const efEncDownload = document.getElementById('efEncDownload');
+    .tray-caption {
+      position: absolute;
+      bottom: 10px;
+      left: 14px;
+      right: 14px;
+      font-size: 10px;
+      color: var(--paper-faint);
+      display: flex;
+      justify-content: space-between;
+    }
 
-let efCoverBytes = null;   // Uint8Array
-let efCoverMime = 'image/png';
-let efCoverExt = 'png';
-let efHiddenBytes = null;  // Uint8Array
-let efHiddenName = '';
+    /* ---------- tabs ---------- */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      margin-bottom: 0;
+      border-bottom: 1px solid var(--line);
+    }
 
-function extOf(name){
-  const m = /\.([a-zA-Z0-9]+)$/.exec(name||'');
-  return m ? m[1].toLowerCase() : 'png';
-}
-function mimeForExt(ext){
-  const map = {png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',bmp:'image/bmp'};
-  return map[ext] || 'image/png';
-}
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--paper-faint);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      padding: 14px 10px;
+      cursor: pointer;
+      text-transform: uppercase;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
 
-function updateEfEncBtn(){
-  efEncBtn.disabled = !(efCoverBytes && efHiddenBytes);
-}
+    .tab-btn.active {
+      color: var(--paper);
+      border-bottom-color: var(--safelight);
+    }
 
-setupDropzone(efImgDropzone, efImgInput, async (file)=>{
-  hideStatus(efEncStatus);
-  efEncResultBox.style.display='none';
-  try{
-    const buf = await readFileAsArrayBuffer(file);
-    efCoverBytes = new Uint8Array(buf);
-    efCoverExt = extOf(file.name);
-    efCoverMime = mimeForExt(efCoverExt);
-    efImgPreviewImg.src = URL.createObjectURL(new Blob([efCoverBytes], {type:efCoverMime}));
-    efImgPreviewRow.style.display='flex';
-    efImgName.textContent = file.name;
-    efImgSize.textContent = formatBytes(efCoverBytes.length);
-    updateEfEncBtn();
-  }catch(err){
-    showStatus(efEncStatus,'err', err.message);
-  }
-});
+    .tab-btn:hover {
+      color: var(--paper);
+    }
 
-setupDropzone(efFileDropzone, efFileInput, async (file)=>{
-  hideStatus(efEncStatus);
-  efEncResultBox.style.display='none';
-  try{
-    const buf = await readFileAsArrayBuffer(file);
-    efHiddenBytes = new Uint8Array(buf);
-    efHiddenName = file.name;
-    efFilePreviewRow.style.display='flex';
-    efFileName.textContent = file.name;
-    efFileSize.textContent = formatBytes(efHiddenBytes.length);
-    updateEfEncBtn();
-  }catch(err){
-    showStatus(efEncStatus,'err', err.message);
-  }
-});
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      padding: 36px;
+    }
 
-efEncBtn.addEventListener('click', async ()=>{
-  hideStatus(efEncStatus);
-  efEncResultBox.style.display='none';
-  if(!efCoverBytes || !efHiddenBytes){ showStatus(efEncStatus,'err','請先選擇圖片與要藏入的檔案'); return; }
+    .panel-section {
+      display: none;
+    }
 
-  efEncBtn.disabled = true;
-  efImgPreviewTray.classList.add('processing');
-  await new Promise(r=>setTimeout(r,150));
+    .panel-section.active {
+      display: block;
+    }
 
-  try{
-    const password = efPassword.value;
-    let flag, payload;
-    if(password){
-      flag = 1;
+    .step-eyebrow {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--safelight);
+      letter-spacing: 0.14em;
+      margin: 0 0 8px;
+      text-transform: uppercase;
+    }
+
+    .field-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--paper-dim);
+      margin: 0 0 8px;
+      display: block;
+      letter-spacing: 0.03em;
+    }
+
+    /* dropzone */
+    .dropzone {
+      border: 1px dashed var(--line);
+      border-radius: 6px;
+      padding: 28px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      margin-bottom: 26px;
+      background: var(--ink-2);
+    }
+
+    .dropzone:hover,
+    .dropzone.dragover {
+      border-color: var(--safelight);
+      background: rgba(193, 68, 60, 0.05);
+    }
+
+    .dropzone p {
+      margin: 0;
+      color: var(--paper-dim);
+      font-size: 14px;
+    }
+
+    .dropzone .dz-sub {
+      font-size: 12px;
+      color: var(--paper-faint);
+      margin-top: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .dropzone input {
+      display: none;
+    }
+
+    .preview-row {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 26px;
+      flex-wrap: wrap;
+    }
+
+    .preview-tray {
+      position: relative;
+      width: 180px;
+      height: 180px;
+      flex: 0 0 180px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #100e0c;
+      border: 1px solid var(--line);
+      box-shadow: inset 0 0 0 1px rgba(193, 68, 60, 0.12);
+    }
+
+    .preview-tray img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .preview-tray.processing::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 40%;
+      top: -40%;
+      background: linear-gradient(180deg, rgba(143, 170, 138, 0) 0%, rgba(143, 170, 138, 0.35) 50%, rgba(143, 170, 138, 0) 100%);
+      animation: sweep 1.1s linear infinite;
+    }
+
+    .preview-meta {
+      flex: 1;
+      min-width: 200px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--paper-dim);
+      line-height: 2;
+    }
+
+    .preview-meta b {
+      color: var(--paper);
+    }
+
+    .capacity-bar {
+      height: 4px;
+      background: var(--line);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .capacity-fill {
+      height: 100%;
+      background: var(--signal);
+      width: 0%;
+      transition: width 0.2s;
+    }
+
+    .capacity-fill.over {
+      background: var(--safelight);
+    }
+
+    textarea,
+    input[type=text],
+    input[type=password] {
+      width: 100%;
+      background: var(--ink-2);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      color: var(--paper);
+      padding: 12px 14px;
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 15px;
+      resize: vertical;
+    }
+
+    textarea:focus,
+    input:focus {
+      outline: none;
+      border-color: var(--safelight);
+    }
+
+    textarea {
+      min-height: 100px;
+      margin-bottom: 20px;
+    }
+
+    .pw-row {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 26px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .pw-field {
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .pw-field input {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 14px;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--paper-faint);
+      margin-top: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    button.primary {
+      background: var(--safelight);
+      color: #1b1815;
+      border: none;
+      border-radius: 5px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 13px 26px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    button.primary:hover {
+      background: #d65850;
+    }
+
+    button.primary:active {
+      transform: scale(0.98);
+    }
+
+    button.primary:disabled {
+      background: var(--line);
+      color: var(--paper-faint);
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: none;
+      border: 1px solid var(--line);
+      color: var(--paper-dim);
+      border-radius: 5px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      padding: 10px 18px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    button.secondary:hover {
+      border-color: var(--paper-dim);
+      color: var(--paper);
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 14px 16px;
+      border-radius: 5px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      display: none;
+    }
+
+    .status.show {
+      display: block;
+    }
+
+    .status.ok {
+      background: rgba(143, 170, 138, 0.1);
+      border: 1px solid var(--signal-dim);
+      color: var(--signal);
+    }
+
+    .status.err {
+      background: rgba(193, 68, 60, 0.1);
+      border: 1px solid var(--safelight-dim);
+      color: var(--safelight);
+    }
+
+    .result-box {
+      margin-top: 24px;
+    }
+
+    .result-box .field-label {
+      margin-bottom: 10px;
+    }
+
+    .decoded-text {
+      background: var(--ink-2);
+      border: 1px solid var(--signal-dim);
+      border-radius: 5px;
+      padding: 16px;
+      font-size: 15px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--paper);
+      margin-bottom: 12px;
+    }
+
+    .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      color: var(--signal);
+      text-decoration: none;
+      border: 1px solid var(--signal-dim);
+      padding: 11px 20px;
+      border-radius: 5px;
+      transition: background 0.15s;
+    }
+
+    .download-link:hover {
+      background: rgba(143, 170, 138, 0.08);
+    }
+
+    .action-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    footer {
+      margin-top: 56px;
+      text-align: center;
+      color: var(--paper-faint);
+      font-size: 12px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    footer p {
+      margin: 4px 0;
+    }
+
+    @media(max-width:560px) {
+      h1 {
+        font-size: 32px;
+      }
+
+      .panel {
+        padding: 22px;
+      }
+
+      .hero {
+        gap: 28px;
+      }
+
+      .hero-visual {
+        flex: 0 0 auto;
+      }
+
+      .tray {
+        width: 190px;
+        height: 190px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <div class="hero">
+      <div class="hero-text">
+        <p class="eyebrow">隱寫術 · 端側加密</p>
+        <h1>把一句話，或<br>一個<em>檔案</em>，藏進圖裡</h1>
+        <p>選一張圖片，藏進文字或整個壓縮檔，選擇性加上密碼。所有運算都在你的瀏覽器裡完成——不會上傳任何東西。</p>
+      </div>
+      <div class="hero-visual">
+        <div class="tray">
+          <div class="tray-grid" id="trayGrid"></div>
+          <div class="tray-sweep"></div>
+          <div class="tray-caption mono"><span>001101</span><span>DEVELOPING</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="encode">藏入文字</button>
+      <button class="tab-btn" data-tab="decode">取出文字</button>
+      <button class="tab-btn" data-tab="encodeFile">藏入檔案</button>
+      <button class="tab-btn" data-tab="decodeFile">取出檔案</button>
+    </div>
+
+    <div class="panel">
+
+      <!-- ===================== ENCODE ===================== -->
+      <section class="panel-section active" id="encode">
+        <p class="step-eyebrow">01 選擇圖片</p>
+        <div class="dropzone" id="encDropzone">
+          <p>拖曳圖片到這裡，或點擊選擇檔案</p>
+          <p class="dz-sub">建議使用 PNG（無失真格式，才能完整保留藏入的資料）</p>
+          <input type="file" id="encFileInput" accept="image/*">
+        </div>
+
+        <div class="preview-row" id="encPreviewRow" style="display:none;">
+          <div class="preview-tray" id="encPreviewTray"><img id="encPreviewImg" alt="預覽"></div>
+          <div class="preview-meta">
+            <div>尺寸　<b id="encDims">–</b></div>
+            <div>可藏容量　<b id="encCapacity">–</b></div>
+            <div class="capacity-bar">
+              <div class="capacity-fill" id="encCapacityFill"></div>
+            </div>
+            <div style="margin-top:6px;">已使用　<b id="encUsage">0 bytes</b></div>
+          </div>
+        </div>
+
+        <p class="step-eyebrow">02 輸入文字</p>
+        <span class="field-label">要藏入的內容</span>
+        <textarea id="encText" placeholder="在這裡輸入你想藏進圖片的文字……"></textarea>
+
+        <p class="step-eyebrow">03 加密（選填）</p>
+        <div class="pw-row">
+          <div class="pw-field">
+            <span class="field-label">密碼（留空則不加密）</span>
+            <input type="password" id="encPassword" placeholder="設定密碼以加密內容">
+            <p class="hint">使用 AES-256-GCM 加密，只有輸入正確密碼才能取出文字</p>
+          </div>
+        </div>
+
+        <p class="step-eyebrow">04 匯出</p>
+        <div class="action-row">
+          <button class="primary" id="encBtn" disabled>藏入並產生圖片</button>
+        </div>
+
+        <div class="status" id="encStatus"></div>
+
+        <div class="result-box" id="encResultBox" style="display:none;">
+          <span class="field-label">下載藏字後的圖片</span>
+          <a class="download-link" id="encDownload" download="hidden.png">
+            ⭳ 下載 hidden.png
+          </a>
+        </div>
+      </section>
+
+      <!-- ===================== DECODE ===================== -->
+      <section class="panel-section" id="decode">
+        <p class="step-eyebrow">01 選擇圖片</p>
+        <div class="dropzone" id="decDropzone">
+          <p>拖曳藏有文字的圖片到這裡，或點擊選擇檔案</p>
+          <p class="dz-sub">請上傳「藏入文字」步驟產生的原始 PNG 檔</p>
+          <input type="file" id="decFileInput" accept="image/*">
+        </div>
+
+        <div class="preview-row" id="decPreviewRow" style="display:none;">
+          <div class="preview-tray" id="decPreviewTray"><img id="decPreviewImg" alt="預覽"></div>
+          <div class="preview-meta">
+            <div>尺寸　<b id="decDims">–</b></div>
+            <div>狀態　<b id="decFlagInfo">尚未解析</b></div>
+          </div>
+        </div>
+
+        <p class="step-eyebrow">02 密碼（若加密則必填）</p>
+        <div class="pw-row">
+          <div class="pw-field">
+            <span class="field-label">密碼</span>
+            <input type="password" id="decPassword" placeholder="若藏入時有設密碼，請在此輸入">
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="primary" id="decBtn" disabled>取出文字</button>
+        </div>
+
+        <div class="status" id="decStatus"></div>
+
+        <div class="result-box" id="decResultBox" style="display:none;">
+          <span class="field-label">取出的文字</span>
+          <div class="decoded-text" id="decodedText"></div>
+          <button class="secondary" id="copyBtn">複製文字</button>
+        </div>
+      </section>
+
+      <!-- ===================== ENCODE FILE (append after image) ===================== -->
+      <section class="panel-section" id="encodeFile">
+        <p class="step-eyebrow">原理</p>
+        <p style="color:var(--paper-dim);font-size:14px;line-height:1.7;margin:0 0 26px;">
+          這個模式把整個檔案（例如 .zip）原封不動接在圖片資料的<b style="color:var(--paper);">結尾之後</b>。
+          圖片本身完全不變，一般看圖軟體、瀏覽器都會正常顯示；只有懂得去圖片尾端讀取的人（或用這個工具）才能把檔案還原出來。
+        </p>
+
+        <p class="step-eyebrow">01 選擇封面圖片</p>
+        <div class="dropzone" id="efImgDropzone">
+          <p>拖曳圖片到這裡，或點擊選擇檔案</p>
+          <p class="dz-sub">任何圖片格式皆可，會保留原始檔案位元組不重新編碼</p>
+          <input type="file" id="efImgInput" accept="image/*">
+        </div>
+        <div class="preview-row" id="efImgPreviewRow" style="display:none;">
+          <div class="preview-tray" id="efImgPreviewTray"><img id="efImgPreviewImg" alt="預覽"></div>
+          <div class="preview-meta">
+            <div>檔名　<b id="efImgName">–</b></div>
+            <div>圖片大小　<b id="efImgSize">–</b></div>
+          </div>
+        </div>
+
+        <p class="step-eyebrow">02 選擇要藏入的檔案</p>
+        <div class="dropzone" id="efFileDropzone">
+          <p>拖曳任何檔案到這裡，例如 .zip、.pdf、.docx……</p>
+          <p class="dz-sub">沒有大小限制，但圖片會因此變大</p>
+          <input type="file" id="efFileInput">
+        </div>
+        <div class="preview-row" id="efFilePreviewRow" style="display:none;">
+          <div class="preview-meta" style="flex:1;">
+            <div>檔名　<b id="efFileName">–</b></div>
+            <div>檔案大小　<b id="efFileSize">–</b></div>
+          </div>
+        </div>
+
+        <p class="step-eyebrow">03 加密（選填）</p>
+        <div class="pw-row">
+          <div class="pw-field">
+            <span class="field-label">密碼（留空則不加密）</span>
+            <input type="password" id="efPassword" placeholder="設定密碼以加密藏入的檔案">
+            <p class="hint">加密後就不再是一般 zip 結構，只有用本工具＋正確密碼才能還原</p>
+          </div>
+        </div>
+
+        <p class="step-eyebrow">04 匯出</p>
+        <div class="action-row">
+          <button class="primary" id="efEncBtn" disabled>合併並產生圖片</button>
+        </div>
+
+        <div class="status" id="efEncStatus"></div>
+
+        <div class="result-box" id="efEncResultBox" style="display:none;">
+          <span class="field-label">下載藏檔後的圖片</span>
+          <a class="download-link" id="efEncDownload" download="hidden.png">
+            ⭳ 下載合併後的圖片
+          </a>
+        </div>
+      </section>
+
+      <!-- ===================== DECODE FILE ===================== -->
+      <section class="panel-section" id="decodeFile">
+        <p class="step-eyebrow">01 選擇藏有檔案的圖片</p>
+        <div class="dropzone" id="dfDropzone">
+          <p>拖曳圖片到這裡，或點擊選擇檔案</p>
+          <p class="dz-sub">請上傳「藏入檔案」步驟產生的圖片</p>
+          <input type="file" id="dfFileInput" accept="image/*">
+        </div>
+
+        <div class="preview-row" id="dfPreviewRow" style="display:none;">
+          <div class="preview-tray" id="dfPreviewTray"><img id="dfPreviewImg" alt="預覽"></div>
+          <div class="preview-meta">
+            <div>圖片大小　<b id="dfImgSize">–</b></div>
+            <div>狀態　<b id="dfFlagInfo">尚未解析</b></div>
+          </div>
+        </div>
+
+        <p class="step-eyebrow">02 密碼（若加密則必填）</p>
+        <div class="pw-row">
+          <div class="pw-field">
+            <span class="field-label">密碼</span>
+            <input type="password" id="dfPassword" placeholder="若藏入時有設密碼，請在此輸入">
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="primary" id="dfBtn" disabled>取出檔案</button>
+        </div>
+
+        <div class="status" id="dfStatus"></div>
+
+        <div class="result-box" id="dfResultBox" style="display:none;">
+          <span class="field-label">還原的檔案</span>
+          <div class="decoded-text mono" id="dfFileInfo" style="margin-bottom:12px;"></div>
+          <a class="download-link" id="dfDownload" download="">
+            ⭳ 下載還原的檔案
+          </a>
+        </div>
+      </section>
+
+    </div>
+
+    <footer>
+      <p>所有加解密與圖片處理都在瀏覽器本機執行，不會上傳任何資料。</p>
+      <p>暗像 · Image Steganography Tool</p>
+    </footer>
+  </div>
+
+  <script>
+    /* ---------- decorative tray grid ---------- */
+    (function () {
+      const grid = document.getElementById('trayGrid');
+      for (let i = 0; i < 144; i++) {
+        const s = document.createElement('span');
+        grid.appendChild(s);
+      }
+    })();
+
+    /* ---------- tabs ---------- */
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    /* ================= core steganography helpers ================= */
+
+    const HEADER_BYTES = 5; // 1 flag byte + 4 length bytes (big endian)
+
+    function u8ToBits(bytes) {
+      const bits = new Uint8Array(bytes.length * 8);
+      for (let i = 0; i < bytes.length; i++) {
+        for (let b = 0; b < 8; b++) {
+          bits[i * 8 + b] = (bytes[i] >> (7 - b)) & 1;
+        }
+      }
+      return bits;
+    }
+    function bitsToBytes(bits) {
+      const out = new Uint8Array(bits.length / 8);
+      for (let i = 0; i < out.length; i++) {
+        let v = 0;
+        for (let b = 0; b < 8; b++) {
+          v = (v << 1) | bits[i * 8 + b];
+        }
+        out[i] = v;
+      }
+      return out;
+    }
+    function embedBitsIntoImageData(imageData, bits) {
+      const data = imageData.data;
+      let bi = 0;
+      for (let i = 0; i < data.length && bi < bits.length; i++) {
+        if ((i & 3) === 3) continue; // skip alpha channel
+        data[i] = (data[i] & 0xFE) | bits[bi];
+        bi++;
+      }
+      return bi; // bits actually written
+    }
+    function extractBitsFromImageData(imageData, numBits) {
+      const data = imageData.data;
+      const bits = new Uint8Array(numBits);
+      let bi = 0;
+      for (let i = 0; i < data.length && bi < numBits; i++) {
+        if ((i & 3) === 3) continue;
+        bits[bi] = data[i] & 1;
+        bi++;
+      }
+      return bits;
+    }
+    function imageCapacityBytes(width, height) {
+      const usableChannels = width * height * 3; // RGB only
+      const totalBits = usableChannels;
+      return Math.floor(totalBits / 8);
+    }
+
+    /* ---------- crypto helpers (AES-GCM + PBKDF2) ---------- */
+    async function deriveKey(password, salt) {
+      const enc = new TextEncoder();
+      const baseKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+      return crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: 150000, hash: 'SHA-256' },
+        baseKey,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    }
+    async function encryptText(text, password) {
       const salt = crypto.getRandomValues(new Uint8Array(16));
       const iv = crypto.getRandomValues(new Uint8Array(12));
       const key = await deriveKey(password, salt);
-      const ciphertext = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, efHiddenBytes));
-      payload = concatBytes(salt, iv, ciphertext);
-    }else{
-      flag = 0;
-      payload = efHiddenBytes;
+      const enc = new TextEncoder();
+      const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(text)));
+      const payload = new Uint8Array(salt.length + iv.length + ciphertext.length);
+      payload.set(salt, 0);
+      payload.set(iv, salt.length);
+      payload.set(ciphertext, salt.length + iv.length);
+      return payload;
     }
-    const tail = buildFileTail(flag, efHiddenName, payload);
-    const combined = concatBytes(efCoverBytes, tail);
-    const blob = new Blob([combined], {type: efCoverMime});
-    const url = URL.createObjectURL(blob);
-    efEncDownload.href = url;
-    efEncDownload.download = 'hidden.' + efCoverExt;
-    efEncResultBox.style.display='block';
-    showStatus(efEncStatus,'ok','完成！檔案已藏在圖片結尾，點選下方按鈕下載（大小約 ' + formatBytes(combined.length) + '）。');
-  }catch(err){
-    showStatus(efEncStatus,'err', err.message || '發生錯誤，請再試一次');
-  }finally{
-    efImgPreviewTray.classList.remove('processing');
-    efEncBtn.disabled = false;
-  }
-});
-
-/* ---------- decode file UI ---------- */
-const dfDropzone = document.getElementById('dfDropzone');
-const dfFileInput = document.getElementById('dfFileInput');
-const dfPreviewRow = document.getElementById('dfPreviewRow');
-const dfPreviewImg = document.getElementById('dfPreviewImg');
-const dfPreviewTray = document.getElementById('dfPreviewTray');
-const dfImgSize = document.getElementById('dfImgSize');
-const dfFlagInfo = document.getElementById('dfFlagInfo');
-const dfPassword = document.getElementById('dfPassword');
-const dfBtn = document.getElementById('dfBtn');
-const dfStatus = document.getElementById('dfStatus');
-const dfResultBox = document.getElementById('dfResultBox');
-const dfFileInfo = document.getElementById('dfFileInfo');
-const dfDownload = document.getElementById('dfDownload');
-
-let dfBytes = null;
-let dfParsed = null;
-
-setupDropzone(dfDropzone, dfFileInput, async (file)=>{
-  hideStatus(dfStatus);
-  dfResultBox.style.display='none';
-  dfFlagInfo.textContent = '解析中…';
-  dfBtn.disabled = true;
-  dfParsed = null;
-  try{
-    const buf = await readFileAsArrayBuffer(file);
-    dfBytes = new Uint8Array(buf);
-    dfPreviewImg.src = URL.createObjectURL(new Blob([dfBytes], {type: file.type || 'image/png'}));
-    dfPreviewRow.style.display='flex';
-    dfImgSize.textContent = formatBytes(dfBytes.length);
-
-    const parsed = findValidTail(dfBytes);
-    if(!parsed){
-      dfFlagInfo.textContent = '這張圖片裡沒有找到藏入的檔案';
-      return;
-    }
-    dfParsed = parsed;
-    dfFlagInfo.textContent = (parsed.flag===1 ? '偵測到已加密檔案 🔒　' : '偵測到未加密檔案　') + parsed.filename;
-    dfBtn.disabled = false;
-  }catch(err){
-    showStatus(dfStatus,'err', err.message);
-    dfFlagInfo.textContent = '解析失敗';
-  }
-});
-
-dfBtn.addEventListener('click', async ()=>{
-  hideStatus(dfStatus);
-  dfResultBox.style.display='none';
-  if(!dfParsed){ showStatus(dfStatus,'err','請先選擇有效的圖片'); return; }
-
-  dfBtn.disabled = true;
-  dfPreviewTray.classList.add('processing');
-  await new Promise(r=>setTimeout(r,150));
-
-  try{
-    let fileBytes;
-    if(dfParsed.flag===1){
-      const password = dfPassword.value;
-      if(!password){ throw new Error('這個檔案已加密，請輸入密碼'); }
-      const payload = dfParsed.payload;
-      const salt = payload.slice(0,16);
-      const iv = payload.slice(16,28);
+    async function decryptPayload(payload, password) {
+      const salt = payload.slice(0, 16);
+      const iv = payload.slice(16, 28);
       const ciphertext = payload.slice(28);
-      try{
-        const key = await deriveKey(password, salt);
-        const plainBuf = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, ciphertext);
-        fileBytes = new Uint8Array(plainBuf);
-      }catch(e){
-        throw new Error('密碼錯誤，或圖片內容已毀損');
-      }
-    }else{
-      fileBytes = dfParsed.payload;
+      const key = await deriveKey(password, salt);
+      const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+      return new TextDecoder().decode(plainBuf);
     }
 
-    const blob = new Blob([fileBytes]);
-    const url = URL.createObjectURL(blob);
-    dfDownload.href = url;
-    dfDownload.download = dfParsed.filename || 'extracted.bin';
-    dfFileInfo.textContent = dfParsed.filename + '　·　' + formatBytes(fileBytes.length);
-    dfResultBox.style.display='block';
-    showStatus(dfStatus,'ok','成功還原藏在圖片中的檔案。');
-  }catch(err){
-    showStatus(dfStatus,'err', err.message || '還原失敗，請確認圖片與密碼是否正確');
-  }finally{
-    dfPreviewTray.classList.remove('processing');
-    dfBtn.disabled = false;
-  }
-});
-</script>
+    function buildPayloadBytes(flag, payload) {
+      const out = new Uint8Array(HEADER_BYTES + payload.length);
+      out[0] = flag;
+      out[1] = (payload.length >>> 24) & 0xFF;
+      out[2] = (payload.length >>> 16) & 0xFF;
+      out[3] = (payload.length >>> 8) & 0xFF;
+      out[4] = payload.length & 0xFF;
+      out.set(payload, HEADER_BYTES);
+      return out;
+    }
+
+    /* ================= ENCODE UI ================= */
+    const encDropzone = document.getElementById('encDropzone');
+    const encFileInput = document.getElementById('encFileInput');
+    const encPreviewRow = document.getElementById('encPreviewRow');
+    const encPreviewImg = document.getElementById('encPreviewImg');
+    const encPreviewTray = document.getElementById('encPreviewTray');
+    const encDims = document.getElementById('encDims');
+    const encCapacity = document.getElementById('encCapacity');
+    const encCapacityFill = document.getElementById('encCapacityFill');
+    const encUsage = document.getElementById('encUsage');
+    const encText = document.getElementById('encText');
+    const encPassword = document.getElementById('encPassword');
+    const encBtn = document.getElementById('encBtn');
+    const encStatus = document.getElementById('encStatus');
+    const encResultBox = document.getElementById('encResultBox');
+    const encDownload = document.getElementById('encDownload');
+
+    let encImage = null; // HTMLImageElement
+    let encCapacityBytes = 0;
+
+    function setupDropzone(zone, input, onFile) {
+      zone.addEventListener('click', () => input.click());
+      input.addEventListener('change', e => {
+        if (e.target.files[0]) onFile(e.target.files[0]);
+      });
+      zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+      zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('dragover');
+        if (e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);
+      });
+    }
+
+    function loadImageFile(file) {
+      return new Promise((resolve, reject) => {
+        if (!file.type.startsWith('image/')) { reject(new Error('請選擇圖片檔')); return; }
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => resolve({ img, dataUrl: reader.result });
+          img.onerror = () => reject(new Error('圖片讀取失敗'));
+          img.src = reader.result;
+        };
+        reader.onerror = () => reject(new Error('檔案讀取失敗'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function showStatus(el, type, msg) {
+      el.className = 'status show ' + type;
+      el.textContent = msg;
+    }
+    function hideStatus(el) {
+      el.className = 'status';
+    }
+
+    function updateEncCapacity() {
+      encCapacityBytes = imageCapacityBytes(encImage.naturalWidth, encImage.naturalHeight);
+      encCapacity.textContent = encCapacityBytes.toLocaleString() + ' bytes';
+      updateEncUsage();
+    }
+    function estimateUsageBytes() {
+      const textBytes = new TextEncoder().encode(encText.value).length;
+      const hasPw = encPassword.value.length > 0;
+      // encrypted payload = salt(16)+iv(12)+ciphertext(text+16 tag) ; plain = text bytes
+      const payloadLen = hasPw ? (16 + 12 + textBytes + 16) : textBytes;
+      return HEADER_BYTES + payloadLen;
+    }
+    function updateEncUsage() {
+      if (!encImage) { return; }
+      const used = estimateUsageBytes();
+      encUsage.textContent = used.toLocaleString() + ' bytes';
+      const pct = encCapacityBytes > 0 ? Math.min(100, (used / encCapacityBytes) * 100) : 0;
+      encCapacityFill.style.width = pct + '%';
+      encCapacityFill.classList.toggle('over', used > encCapacityBytes);
+      encBtn.disabled = !(encText.value.trim().length > 0 && used <= encCapacityBytes);
+    }
+
+    setupDropzone(encDropzone, encFileInput, async (file) => {
+      hideStatus(encStatus);
+      encResultBox.style.display = 'none';
+      try {
+        const { img, dataUrl } = await loadImageFile(file);
+        encImage = img;
+        encPreviewImg.src = dataUrl;
+        encPreviewRow.style.display = 'flex';
+        encDims.textContent = img.naturalWidth + ' × ' + img.naturalHeight + ' px';
+        updateEncCapacity();
+      } catch (err) {
+        showStatus(encStatus, 'err', err.message);
+      }
+    });
+    encText.addEventListener('input', updateEncUsage);
+    encPassword.addEventListener('input', updateEncUsage);
+
+    encBtn.addEventListener('click', async () => {
+      hideStatus(encStatus);
+      encResultBox.style.display = 'none';
+      if (!encImage) { showStatus(encStatus, 'err', '請先選擇圖片'); return; }
+      const text = encText.value;
+      if (!text.trim()) { showStatus(encStatus, 'err', '請輸入要藏入的文字'); return; }
+
+      encBtn.disabled = true;
+      encPreviewTray.classList.add('processing');
+      await new Promise(r => setTimeout(r, 150)); // let the developing animation play briefly
+
+      try {
+        const password = encPassword.value;
+        let flag, payload;
+        if (password) {
+          flag = 1;
+          payload = await encryptText(text, password);
+        } else {
+          flag = 0;
+          payload = new TextEncoder().encode(text);
+        }
+        const fullBytes = buildPayloadBytes(flag, payload);
+        const bits = u8ToBits(fullBytes);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = encImage.naturalWidth;
+        canvas.height = encImage.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(encImage, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        const capacityBits = canvas.width * canvas.height * 3;
+        if (bits.length > capacityBits) {
+          throw new Error('文字內容超過圖片可藏容量，請縮短文字或換一張更大的圖片');
+        }
+
+        embedBitsIntoImageData(imageData, bits);
+        ctx.putImageData(imageData, 0, 0);
+
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          encDownload.href = url;
+          encResultBox.style.display = 'block';
+          showStatus(encStatus, 'ok', '完成！文字已藏入圖片，點選下方按鈕下載。');
+        }, 'image/png');
+
+      } catch (err) {
+        showStatus(encStatus, 'err', err.message || '發生錯誤，請再試一次');
+      } finally {
+        encPreviewTray.classList.remove('processing');
+        encBtn.disabled = false;
+      }
+    });
+
+    /* ================= DECODE UI ================= */
+    const decDropzone = document.getElementById('decDropzone');
+    const decFileInput = document.getElementById('decFileInput');
+    const decPreviewRow = document.getElementById('decPreviewRow');
+    const decPreviewImg = document.getElementById('decPreviewImg');
+    const decPreviewTray = document.getElementById('decPreviewTray');
+    const decDims = document.getElementById('decDims');
+    const decFlagInfo = document.getElementById('decFlagInfo');
+    const decPassword = document.getElementById('decPassword');
+    const decBtn = document.getElementById('decBtn');
+    const decStatus = document.getElementById('decStatus');
+    const decResultBox = document.getElementById('decResultBox');
+    const decodedTextEl = document.getElementById('decodedText');
+    const copyBtn = document.getElementById('copyBtn');
+
+    let decImage = null;
+    let decHeaderInfo = null; // {flag, length}
+
+    setupDropzone(decDropzone, decFileInput, async (file) => {
+      hideStatus(decStatus);
+      decResultBox.style.display = 'none';
+      decFlagInfo.textContent = '解析中…';
+      try {
+        const { img, dataUrl } = await loadImageFile(file);
+        decImage = img;
+        decPreviewImg.src = dataUrl;
+        decPreviewRow.style.display = 'flex';
+        decDims.textContent = img.naturalWidth + ' × ' + img.naturalHeight + ' px';
+
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const headerBits = extractBitsFromImageData(imageData, HEADER_BYTES * 8);
+        const headerBytes = bitsToBytes(headerBits);
+        const flag = headerBytes[0];
+        const length = (headerBytes[1] << 24) | (headerBytes[2] << 16) | (headerBytes[3] << 8) | headerBytes[4];
+        const capacityBits = canvas.width * canvas.height * 3;
+
+        if (length < 0 || (HEADER_BYTES + length) * 8 > capacityBits || (flag !== 0 && flag !== 1)) {
+          decFlagInfo.textContent = '這張圖片似乎沒有藏入的資料';
+          decBtn.disabled = true;
+          decHeaderInfo = null;
+          return;
+        }
+        decHeaderInfo = { flag, length };
+        decFlagInfo.textContent = flag === 1 ? '偵測到已加密內容 🔒' : '偵測到未加密內容';
+        decBtn.disabled = false;
+      } catch (err) {
+        showStatus(decStatus, 'err', err.message);
+        decFlagInfo.textContent = '解析失敗';
+      }
+    });
+
+    decBtn.addEventListener('click', async () => {
+      hideStatus(decStatus);
+      decResultBox.style.display = 'none';
+      if (!decImage || !decHeaderInfo) { showStatus(decStatus, 'err', '請先選擇有效的圖片'); return; }
+
+      decBtn.disabled = true;
+      decPreviewTray.classList.add('processing');
+      await new Promise(r => setTimeout(r, 150));
+
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = decImage.naturalWidth;
+        canvas.height = decImage.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(decImage, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        const { flag, length } = decHeaderInfo;
+        const totalBits = (HEADER_BYTES + length) * 8;
+        const allBits = extractBitsFromImageData(imageData, totalBits);
+        const allBytes = bitsToBytes(allBits);
+        const payload = allBytes.slice(HEADER_BYTES);
+
+        let text;
+        if (flag === 1) {
+          const password = decPassword.value;
+          if (!password) { throw new Error('這段內容已加密，請輸入密碼'); }
+          try {
+            text = await decryptPayload(payload, password);
+          } catch (e) {
+            throw new Error('密碼錯誤，或圖片內容已毀損');
+          }
+        } else {
+          text = new TextDecoder().decode(payload);
+        }
+
+        decodedTextEl.textContent = text;
+        decResultBox.style.display = 'block';
+        showStatus(decStatus, 'ok', '成功取出藏在圖片中的文字。');
+      } catch (err) {
+        showStatus(decStatus, 'err', err.message || '解密失敗，請確認圖片與密碼是否正確');
+      } finally {
+        decPreviewTray.classList.remove('processing');
+        decBtn.disabled = false;
+      }
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(decodedTextEl.textContent);
+        copyBtn.textContent = '已複製';
+        setTimeout(() => copyBtn.textContent = '複製文字', 1500);
+      } catch (e) {
+        copyBtn.textContent = '複製失敗';
+      }
+    });
+
+    /* ================= FILE-APPEND STEGANOGRAPHY (encode/decode whole files) ================= */
+
+    const MAGIC = new TextEncoder().encode('STEGOFL1'); // 8-byte signature
+
+    function readFileAsArrayBuffer(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('檔案讀取失敗'));
+        reader.readAsArrayBuffer(file);
+      });
+    }
+    function formatBytes(n) {
+      if (n < 1024) return n + ' B';
+      if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+      return (n / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+    function concatBytes(...parts) {
+      let total = 0;
+      parts.forEach(p => total += p.length);
+      const out = new Uint8Array(total);
+      let offset = 0;
+      parts.forEach(p => { out.set(p, offset); offset += p.length; });
+      return out;
+    }
+    function u32be(n) {
+      return new Uint8Array([(n >>> 24) & 0xFF, (n >>> 16) & 0xFF, (n >>> 8) & 0xFF, n & 0xFF]);
+    }
+    function readU32be(bytes, offset) {
+      return (bytes[offset] << 24 | bytes[offset + 1] << 16 | bytes[offset + 2] << 8 | bytes[offset + 3]) >>> 0;
+    }
+    function u16be(n) {
+      return new Uint8Array([(n >>> 8) & 0xFF, n & 0xFF]);
+    }
+    function readU16be(bytes, offset) {
+      return (bytes[offset] << 8) | bytes[offset + 1];
+    }
+
+    /* build tail = MAGIC(8) + flag(1) + fnameLen(2) + fname(utf8) + payloadLen(4) + payload */
+    function buildFileTail(flag, filename, payload) {
+      const fnameBytes = new TextEncoder().encode(filename);
+      return concatBytes(
+        MAGIC,
+        new Uint8Array([flag]),
+        u16be(fnameBytes.length),
+        fnameBytes,
+        u32be(payload.length),
+        payload
+      );
+    }
+
+    /* find all offsets where MAGIC occurs in bytes */
+    function findMagicOffsets(bytes) {
+      const offsets = [];
+      const first = MAGIC[0];
+      for (let i = 0; i <= bytes.length - MAGIC.length; i++) {
+        if (bytes[i] !== first) continue;
+        let match = true;
+        for (let j = 1; j < MAGIC.length; j++) {
+          if (bytes[i + j] !== MAGIC[j]) { match = false; break; }
+        }
+        if (match) offsets.push(i);
+      }
+      return offsets;
+    }
+
+    /* try to parse a valid tail starting at each candidate offset; return {flag, filename, payload} or null */
+    function tryParseTail(bytes, offset) {
+      try {
+        let p = offset + MAGIC.length;
+        const flag = bytes[p]; p += 1;
+        if (flag !== 0 && flag !== 1) return null;
+        const fnameLen = readU16be(bytes, p); p += 2;
+        if (p + fnameLen > bytes.length) return null;
+        const fnameBytes = bytes.slice(p, p + fnameLen); p += fnameLen;
+        const filename = new TextDecoder().decode(fnameBytes);
+        const payloadLen = readU32be(bytes, p); p += 4;
+        if (p + payloadLen !== bytes.length) return null; // must exactly reach end of file
+        const payload = bytes.slice(p, p + payloadLen);
+        return { flag, filename, payload };
+      } catch (e) {
+        return null;
+      }
+    }
+    function findValidTail(bytes) {
+      const offsets = findMagicOffsets(bytes);
+      // prefer the last occurrence first (real tail is appended at the very end)
+      for (let i = offsets.length - 1; i >= 0; i--) {
+        const parsed = tryParseTail(bytes, offsets[i]);
+        if (parsed) return parsed;
+      }
+      return null;
+    }
+
+    /* ---------- encode file UI ---------- */
+    const efImgDropzone = document.getElementById('efImgDropzone');
+    const efImgInput = document.getElementById('efImgInput');
+    const efImgPreviewRow = document.getElementById('efImgPreviewRow');
+    const efImgPreviewImg = document.getElementById('efImgPreviewImg');
+    const efImgPreviewTray = document.getElementById('efImgPreviewTray');
+    const efImgName = document.getElementById('efImgName');
+    const efImgSize = document.getElementById('efImgSize');
+
+    const efFileDropzone = document.getElementById('efFileDropzone');
+    const efFileInput = document.getElementById('efFileInput');
+    const efFilePreviewRow = document.getElementById('efFilePreviewRow');
+    const efFileName = document.getElementById('efFileName');
+    const efFileSize = document.getElementById('efFileSize');
+
+    const efPassword = document.getElementById('efPassword');
+    const efEncBtn = document.getElementById('efEncBtn');
+    const efEncStatus = document.getElementById('efEncStatus');
+    const efEncResultBox = document.getElementById('efEncResultBox');
+    const efEncDownload = document.getElementById('efEncDownload');
+
+    let efCoverBytes = null;   // Uint8Array
+    let efCoverMime = 'image/png';
+    let efCoverExt = 'png';
+    let efHiddenBytes = null;  // Uint8Array
+    let efHiddenName = '';
+
+    function extOf(name) {
+      const m = /\.([a-zA-Z0-9]+)$/.exec(name || '');
+      return m ? m[1].toLowerCase() : 'png';
+    }
+    function mimeForExt(ext) {
+      const map = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp' };
+      return map[ext] || 'image/png';
+    }
+
+    function updateEfEncBtn() {
+      efEncBtn.disabled = !(efCoverBytes && efHiddenBytes);
+    }
+
+    setupDropzone(efImgDropzone, efImgInput, async (file) => {
+      hideStatus(efEncStatus);
+      efEncResultBox.style.display = 'none';
+      try {
+        const buf = await readFileAsArrayBuffer(file);
+        efCoverBytes = new Uint8Array(buf);
+        efCoverExt = extOf(file.name);
+        efCoverMime = mimeForExt(efCoverExt);
+        efImgPreviewImg.src = URL.createObjectURL(new Blob([efCoverBytes], { type: efCoverMime }));
+        efImgPreviewRow.style.display = 'flex';
+        efImgName.textContent = file.name;
+        efImgSize.textContent = formatBytes(efCoverBytes.length);
+        updateEfEncBtn();
+      } catch (err) {
+        showStatus(efEncStatus, 'err', err.message);
+      }
+    });
+
+    setupDropzone(efFileDropzone, efFileInput, async (file) => {
+      hideStatus(efEncStatus);
+      efEncResultBox.style.display = 'none';
+      try {
+        const buf = await readFileAsArrayBuffer(file);
+        efHiddenBytes = new Uint8Array(buf);
+        efHiddenName = file.name;
+        efFilePreviewRow.style.display = 'flex';
+        efFileName.textContent = file.name;
+        efFileSize.textContent = formatBytes(efHiddenBytes.length);
+        updateEfEncBtn();
+      } catch (err) {
+        showStatus(efEncStatus, 'err', err.message);
+      }
+    });
+
+    efEncBtn.addEventListener('click', async () => {
+      hideStatus(efEncStatus);
+      efEncResultBox.style.display = 'none';
+      if (!efCoverBytes || !efHiddenBytes) { showStatus(efEncStatus, 'err', '請先選擇圖片與要藏入的檔案'); return; }
+
+      efEncBtn.disabled = true;
+      efImgPreviewTray.classList.add('processing');
+      await new Promise(r => setTimeout(r, 150));
+
+      try {
+        const password = efPassword.value;
+        let flag, payload;
+        if (password) {
+          flag = 1;
+          const salt = crypto.getRandomValues(new Uint8Array(16));
+          const iv = crypto.getRandomValues(new Uint8Array(12));
+          const key = await deriveKey(password, salt);
+          const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, efHiddenBytes));
+          payload = concatBytes(salt, iv, ciphertext);
+        } else {
+          flag = 0;
+          payload = efHiddenBytes;
+        }
+        const tail = buildFileTail(flag, efHiddenName, payload);
+        const combined = concatBytes(efCoverBytes, tail);
+        const blob = new Blob([combined], { type: efCoverMime });
+        const url = URL.createObjectURL(blob);
+        efEncDownload.href = url;
+        efEncDownload.download = 'hidden.' + efCoverExt;
+        efEncResultBox.style.display = 'block';
+        showStatus(efEncStatus, 'ok', '完成！檔案已藏在圖片結尾，點選下方按鈕下載（大小約 ' + formatBytes(combined.length) + '）。');
+      } catch (err) {
+        showStatus(efEncStatus, 'err', err.message || '發生錯誤，請再試一次');
+      } finally {
+        efImgPreviewTray.classList.remove('processing');
+        efEncBtn.disabled = false;
+      }
+    });
+
+    /* ---------- decode file UI ---------- */
+    const dfDropzone = document.getElementById('dfDropzone');
+    const dfFileInput = document.getElementById('dfFileInput');
+    const dfPreviewRow = document.getElementById('dfPreviewRow');
+    const dfPreviewImg = document.getElementById('dfPreviewImg');
+    const dfPreviewTray = document.getElementById('dfPreviewTray');
+    const dfImgSize = document.getElementById('dfImgSize');
+    const dfFlagInfo = document.getElementById('dfFlagInfo');
+    const dfPassword = document.getElementById('dfPassword');
+    const dfBtn = document.getElementById('dfBtn');
+    const dfStatus = document.getElementById('dfStatus');
+    const dfResultBox = document.getElementById('dfResultBox');
+    const dfFileInfo = document.getElementById('dfFileInfo');
+    const dfDownload = document.getElementById('dfDownload');
+
+    let dfBytes = null;
+    let dfParsed = null;
+
+    setupDropzone(dfDropzone, dfFileInput, async (file) => {
+      hideStatus(dfStatus);
+      dfResultBox.style.display = 'none';
+      dfFlagInfo.textContent = '解析中…';
+      dfBtn.disabled = true;
+      dfParsed = null;
+      try {
+        const buf = await readFileAsArrayBuffer(file);
+        dfBytes = new Uint8Array(buf);
+        dfPreviewImg.src = URL.createObjectURL(new Blob([dfBytes], { type: file.type || 'image/png' }));
+        dfPreviewRow.style.display = 'flex';
+        dfImgSize.textContent = formatBytes(dfBytes.length);
+
+        const parsed = findValidTail(dfBytes);
+        if (!parsed) {
+          dfFlagInfo.textContent = '這張圖片裡沒有找到藏入的檔案';
+          return;
+        }
+        dfParsed = parsed;
+        dfFlagInfo.textContent = (parsed.flag === 1 ? '偵測到已加密檔案 🔒　' : '偵測到未加密檔案　') + parsed.filename;
+        dfBtn.disabled = false;
+      } catch (err) {
+        showStatus(dfStatus, 'err', err.message);
+        dfFlagInfo.textContent = '解析失敗';
+      }
+    });
+
+    dfBtn.addEventListener('click', async () => {
+      hideStatus(dfStatus);
+      dfResultBox.style.display = 'none';
+      if (!dfParsed) { showStatus(dfStatus, 'err', '請先選擇有效的圖片'); return; }
+
+      dfBtn.disabled = true;
+      dfPreviewTray.classList.add('processing');
+      await new Promise(r => setTimeout(r, 150));
+
+      try {
+        let fileBytes;
+        if (dfParsed.flag === 1) {
+          const password = dfPassword.value;
+          if (!password) { throw new Error('這個檔案已加密，請輸入密碼'); }
+          const payload = dfParsed.payload;
+          const salt = payload.slice(0, 16);
+          const iv = payload.slice(16, 28);
+          const ciphertext = payload.slice(28);
+          try {
+            const key = await deriveKey(password, salt);
+            const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+            fileBytes = new Uint8Array(plainBuf);
+          } catch (e) {
+            throw new Error('密碼錯誤，或圖片內容已毀損');
+          }
+        } else {
+          fileBytes = dfParsed.payload;
+        }
+
+        const blob = new Blob([fileBytes]);
+        const url = URL.createObjectURL(blob);
+        dfDownload.href = url;
+        dfDownload.download = dfParsed.filename || 'extracted.bin';
+        dfFileInfo.textContent = dfParsed.filename + '　·　' + formatBytes(fileBytes.length);
+        dfResultBox.style.display = 'block';
+        showStatus(dfStatus, 'ok', '成功還原藏在圖片中的檔案。');
+      } catch (err) {
+        showStatus(dfStatus, 'err', err.message || '還原失敗，請確認圖片與密碼是否正確');
+      } finally {
+        dfPreviewTray.classList.remove('processing');
+        dfBtn.disabled = false;
+      }
+    });
+  </script>
 </body>
+
 </html>
