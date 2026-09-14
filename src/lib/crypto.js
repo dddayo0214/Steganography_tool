@@ -1,0 +1,7 @@
+import{asU8,concatBytes}from'./bits.js';
+export const SALT_BYTES=16,IV_BYTES=12,GCM_TAG_BYTES=16,PBKDF2_ITERATIONS=150000;
+function webCrypto(){if(!globalThis.crypto?.subtle)throw new Error('加密功能需要 HTTPS 或 localhost（crypto.subtle 無法使用）');return globalThis.crypto;}
+export async function deriveKey(password,salt,usages=['encrypt','decrypt']){if(typeof password!=='string'||!password)throw new Error('密碼不可為空');const wc=webCrypto(),base=await wc.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveKey']);return wc.subtle.deriveKey({name:'PBKDF2',salt:asU8(salt),iterations:PBKDF2_ITERATIONS,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,usages);}
+export async function encrypt(data,password){const wc=webCrypto(),salt=wc.getRandomValues(new Uint8Array(16)),iv=wc.getRandomValues(new Uint8Array(12)),key=await deriveKey(password,salt,['encrypt']);const cipher=new Uint8Array(await wc.subtle.encrypt({name:'AES-GCM',iv},key,asU8(data)));return concatBytes(salt,iv,cipher);}
+export async function decrypt(payload,password){const b=asU8(payload);if(b.length<44)throw new Error('加密資料格式無效或已損毀');try{const salt=b.slice(0,16),iv=b.slice(16,28),key=await deriveKey(password,salt,['decrypt']);return new Uint8Array(await webCrypto().subtle.decrypt({name:'AES-GCM',iv},key,b.slice(28)));}catch(e){if(e?.message==='密碼不可為空')throw e;throw new Error('解密失敗：密碼錯誤或資料已損毀',{cause:e});}}
+export const encryptedSize=n=>SALT_BYTES+IV_BYTES+n+GCM_TAG_BYTES;
